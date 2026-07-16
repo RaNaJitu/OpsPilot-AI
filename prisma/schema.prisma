@@ -34,6 +34,7 @@ model Incident {
   user        User @relation(fields: [userId], references: [id])
 
   files       UploadedFile[]
+  AIResponses AIResponse[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -49,7 +50,7 @@ model UploadedFile {
   path        String
 
   incidentId  String
-  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incidents   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   createdAt   DateTime @default(now())
 }
@@ -61,7 +62,7 @@ model AIResponse {
   response    Json
 
   incidentId  String
-  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  incidents   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 
   createdAt   DateTime @default(now())
 }

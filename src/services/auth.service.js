@@ -43,7 +43,7 @@ exports.verifyGoogleIdToken = async(idToken) =>{
                id: true,
                email: true,
                name: true,
-               picture: true,
+               avatar: true,
                googleId: true,
                createdAt: true
           }
@@ -55,7 +55,7 @@ exports.verifyGoogleIdToken = async(idToken) =>{
                googleId: sub,
                email,
                name,
-               picture,
+               avatar: picture,
           },
           });
      }else if (!user.googleId) {
@@ -63,7 +63,7 @@ exports.verifyGoogleIdToken = async(idToken) =>{
                where: { id: user.id },
                data: {
                     googleId: sub,
-                    picture,
+                    avatar: picture,
                     name,
                },
           });
@@ -138,15 +138,25 @@ exports.getProfile = async(userId) =>{
      }
 
      logger.info("If user is not in redis, fetch user from DB");
-     const userProfile = await prisma.users.findUnique({
+     const userProfile = await prisma.user.findUnique({
           where: {
                id: userId
+          },
+          select: {
+               id: true,
+               email: true,
+               name: true,
+               avatar: true,
+               googleId: true,
+               createdAt: true,
           }
      })
-     
-     logger.info("Exclude password field from the user");
-     const {password: _password, ...safeUser} = userProfile;
+
+     if (!userProfile) {
+          throw new UnauthorizedError("User not found", "USER_NOT_FOUND");
+     }
+
      logger.info("Store user profile in redis for future lookups");
-     await redis.set(`user:${userId}`, JSON.stringify(safeUser), 'EX', config.REDIS_USER_TTL);
-     return safeUser;
+     await redis.set(`user:${userId}`, JSON.stringify(userProfile), 'EX', config.REDIS_USER_TTL);
+     return userProfile;
 }

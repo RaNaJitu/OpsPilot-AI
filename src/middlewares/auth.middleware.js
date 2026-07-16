@@ -1,5 +1,6 @@
 const prisma = require("../config/prisma");
-const redis = require("../config/redis");
+const { redis } = require("../config/redis");
+const { config } = require("../config");
 
 const asyncHandler = require("../utils/asyncHandler");
 const { verifyAccessToken } = require("../utils/auth");
@@ -26,7 +27,7 @@ exports.authenticate = asyncHandler(async (req, res, next) => {
         );
     }
 
-    const userId = payload.sub;
+    const userId = payload.id;
 
     let user = await redis.get(`user:${userId}`);
 
@@ -43,7 +44,7 @@ exports.authenticate = asyncHandler(async (req, res, next) => {
         id: true,
         email: true,
         name: true,
-        picture: true,
+        avatar: true,
         createdAt: true,
         },
     });
