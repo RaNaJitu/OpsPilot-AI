@@ -1,0 +1,53 @@
+name: "OpsPilot-AI"
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: OpsPilot
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - OpsPilot-network
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@dmin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8081:80"
+    depends_on:
+      - postgres
+    networks:
+      - OpsPilot-network
+
+  redis:
+    image: redis/redis-stack:6.2.6-v19
+    container_name: redis_insider
+    restart: always
+    environment:
+      REDIS_ARGS: "--requirepass irctcpass"
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    volumes:
+      - redis_data:/data
+    networks:
+      - OpsPilot-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  OpsPilot-network:
+    driver: bridge
