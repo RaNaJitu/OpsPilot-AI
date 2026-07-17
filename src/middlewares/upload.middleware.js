@@ -55,7 +55,7 @@ const fileFilter = (req, file, cb) => {
     });
       return cb(
         new BadRequestError(
-          `Only ${ALLOWED_EXTENSIONS.join(", ")} files up to ${config.MAX_UPLOAD_SIZE} MB are supported.`,
+          `Only ${ALLOWED_EXTENSIONS.join(", ")} files up to ${Math.round(config.MAX_UPLOAD_SIZE / (1024 * 1024))} MB are supported.`,
           "INVALID_FILE_TYPE"
         )
       );
@@ -73,6 +73,7 @@ const upload = multer({
 });
 
 module.exports = {
-  single: upload.single("file"),
-  array: upload.array.bind(upload),
+  single: (fieldName = "file") => upload.single(fieldName),
+  array: (fieldName = "files", maxCount = 10) =>
+    upload.array(fieldName, maxCount),
 };
