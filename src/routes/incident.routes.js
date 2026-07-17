@@ -1,16 +1,17 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { authenticate } = require('../middlewares/auth.middleware');
-const { VERIFY_GOOGLE_ID_TOKEN } = require('../controllers/auth.controller');
-const uploadMiddleware = require('../middlewares/upload.middleware');
-const { UPLOAD } = require('../controllers/incident.controller');
+const { authenticate } = require("../middlewares/auth.middleware");
+const uploadMiddleware = require("../middlewares/upload.middleware");
+const {
+  UPLOAD,
+  LIST,
+  GET_BY_ID,
+  DELETE,
+} = require("../controllers/incident.controller");
 
+router.get("/", authenticate, LIST);
+router.post("/upload", authenticate, uploadMiddleware.single("file"), UPLOAD);
+router.get("/:id", authenticate, GET_BY_ID);
+router.delete("/:id", authenticate, DELETE);
 
-router.get("/", VERIFY_GOOGLE_ID_TOKEN);
-router.post("/:id", VERIFY_GOOGLE_ID_TOKEN);
-router.post("/upload", authenticate,
-    uploadMiddleware.single("logFile"),
-    UPLOAD);
-router.delete("/:id", authenticate, VERIFY_GOOGLE_ID_TOKEN);
-router.delete("/:id/analyze", authenticate, VERIFY_GOOGLE_ID_TOKEN);
 module.exports = router;

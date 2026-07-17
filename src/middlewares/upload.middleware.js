@@ -15,9 +15,12 @@ const ALLOWED_EXTENSIONS = [
   ".json",
 ];
 
+// Browsers often send octet-stream / empty type for .log files
 const ALLOWED_MIME_TYPES = [
   "text/plain",
   "application/json",
+  "application/octet-stream",
+  "",
 ];
 
 if (!fs.existsSync(uploadDir)) {
@@ -33,42 +36,57 @@ const storage = multer.diskStorage({
 
   filename(req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase();
-
     const fileName = `incident_${Date.now()}_${crypto.randomUUID()}${ext}`;
-
     cb(null, fileName);
   },
 });
 
-
 const fileFilter = (req, file, cb) => {
-    const ext = path.extname(file.originalname).trim().toLowerCase();
+  const ext = path.extname(file.originalname).trim().toLowerCase();
+  const mimeType = (file.mimetype || "").toLowerCase();
 
-    if (
-      !ALLOWED_EXTENSIONS.includes(ext) ||
-      !ALLOWED_MIME_TYPES.includes(file.mimetype)
-    ) {
-      logger.warn({
-        file: file.originalname,
-        mimeType: file.mimetype,
-        reason: "Invalid file type"
+  logger.info("Middleware: Upload: File type check", {
+    file: file.originalname,
+    ext,
+    mimeType,
+  });
+
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    logger.warn("Middleware: Upload: Invalid file extension", {
+      file: file.originalname,
+      mimeType,
+      reason: "Invalid file extension",
     });
-      return cb(
-        new BadRequestError(
-          `Only ${ALLOWED_EXTENSIONS.join(", ")} files up to ${Math.round(config.MAX_UPLOAD_SIZE / (1024 * 1024))} MB are supported.`,
-          "INVALID_FILE_TYPE"
-        )
-      );
-    }
+    return cb(
+      new BadRequestError(
+        `Only ${ALLOWED_EXTENSIONS.join(", ")} files up to ${Math.round(config.MAX_UPLOAD_SIZE / (1024 * 1024))} MB are supported.`,
+        "INVALID_FILE_TYPE"
+      )
+    );
+  }
 
-    return cb(null, true);
+  if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+    logger.warn("Middleware: Upload: Invalid file mime type", {
+      file: file.originalname,
+      mimeType,
+      reason: "Invalid file type",
+    });
+    return cb(
+      new BadRequestError(
+        `Only ${ALLOWED_EXTENSIONS.join(", ")} files up to ${Math.round(config.MAX_UPLOAD_SIZE / (1024 * 1024))} MB are supported.`,
+        "INVALID_FILE_TYPE"
+      )
+    );
+  }
+
+  return cb(null, true);
 };
 
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-      fileSize: config.MAX_UPLOAD_SIZE,
+    fileSize: config.MAX_UPLOAD_SIZE,
   },
 });
 

@@ -8,7 +8,7 @@ const { UnauthorizedError } = require("../utils/error");
 
 exports.authenticate = asyncHandler(async (req, res, next) => {
     const token = req.cookies.accessToken;
-
+    
     if (!token) {
         throw new UnauthorizedError(
         "Access token is missing",
