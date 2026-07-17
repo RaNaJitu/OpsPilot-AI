@@ -2,6 +2,7 @@
 const { AppError } = require('../utils/error');
 const {config} = require('../config');
 const logger = require('../config/logger');
+const multer = require("multer");
 
 module.exports = (err, req, res, next) => {
      if (err instanceof AppError) {
@@ -28,5 +29,36 @@ module.exports = (err, req, res, next) => {
           success: false,
           error: "SERVER_ERROR",
           message: "Internal Server Error"
+     });
+};
+
+
+module.exports.errorHandler = (err, req, res, next) => {
+
+     // Multer Errors
+     if (err instanceof multer.MulterError) {
+          return res.status(400).json({
+               success: false,
+               message:
+                    err.code === "LIMIT_FILE_SIZE"
+                         ? "Maximum upload size is 10 MB."
+                         : err.message,
+          });
+     }
+
+     // Custom Errors
+     if (err.statusCode) {
+          return res.status(err.statusCode).json({
+               success: false,
+               message: err.message,
+               errorCode: err.errorCode,
+          });
+     }
+
+     console.error(err);
+
+     return res.status(500).json({
+          success: false,
+          message: "Internal Server Error",
      });
 };

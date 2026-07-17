@@ -7,12 +7,12 @@ exports.UPLOAD = asyncHandler(async (req, res) => {
 
     if (!req.file) {
         throw new BadRequestError(
-        "Log file is required",
+        "Please upload a valid log file.",
         "FILE_REQUIRED"
         );
     }
 
-    const incident = await incidentService.createIncident({
+    const incident = await incidentService.uploadIncident({
         title,
         file: req.file,
         userId: req.user.id,
@@ -20,7 +20,7 @@ exports.UPLOAD = asyncHandler(async (req, res) => {
 
     return res.status(201).json({
         success: true,
-        message: "Incident created successfully",
+        message: "Incident uploaded successfully.",
         data: incident,
     });
 });

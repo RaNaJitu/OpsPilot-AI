@@ -3,9 +3,9 @@ const { config } = require('../config');
 
 const {sgMail} =  require("@sendgrid/mail");
 
-sgMail.setApiKey(env.SENDGRID_API_KEY)
+sgMail.setApiKey(config.SENDGRID_API_KEY)
 
-const minutes = (env.OTP_TTL || 300) / 60;
+const minutes = (config.OTP_TTL || 300) / 60;
 
 // async function sendOTPEmail(email: string, otp: number){
 //     const emailSubject = "Varivied Email"
@@ -114,7 +114,7 @@ async function sendOTPEmail(email, otp) {
 </html>
 `,
   };
-console.log("Sending OTP email to:", email, "from:", env.EMAIL_SEND, "with OTP:", otp);
+console.log("Sending OTP email to:", email, "from:", config.MAIL_SEND, "with OTP:", otp);
   await sgMail.send(msg);
 }
 //#endregion

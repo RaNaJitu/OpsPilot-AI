@@ -46,8 +46,7 @@ const startServer = async () => {
           const shutdown = async () => {
                logger.info('Shutting down gracefully...');
 
-               server.close(async () => {
-                    await disconnectProducer();
+               server.close(() => {
                     logger.info('Server closed');
                     process.exit(0);
                });

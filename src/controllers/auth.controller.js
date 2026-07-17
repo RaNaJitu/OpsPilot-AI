@@ -43,7 +43,7 @@ exports.ROTATE_REFRESH_TOKEN = asyncHandler(async(req, res) =>{
           throw new UnauthorizedError("Refresh token is missing", "LOGIN AGAIN")
      }
      
-     const {newAccessToken, newRefreshToken} = await authService.rotateRefreshToken(refreshToken, deviceId);
+     const {newAccessToken, newRefreshToken} = await authService.rotateRefreshToken(refreshToken);
      res.cookie("accessToken", newAccessToken, cookieOptions(config.ACCESS_TOKEN_EXP_SEC * 1000))
      res.cookie("refreshToken", newRefreshToken, cookieOptions(config.REFRESH_TOKEN_EXP_SEC * 1000))
      .status(200).json({

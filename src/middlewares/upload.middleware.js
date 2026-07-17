@@ -1,13 +1,29 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 
 const { BadRequestError } = require("../utils/error");
+const { config } = require("../config");
+const logger = require("../config/logger");
 
-const uploadDir = path.join(__dirname, "../uploads");
+const uploadDir = path.join(__dirname, "../uploads/incidents");
+
+const ALLOWED_EXTENSIONS = [
+  ".log",
+  ".txt",
+  ".json",
+];
+
+const ALLOWED_MIME_TYPES = [
+  "text/plain",
+  "application/json",
+];
 
 if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+  fs.mkdirSync(uploadDir, {
+    recursive: true,
+  });
 }
 
 const storage = multer.diskStorage({
@@ -16,39 +32,47 @@ const storage = multer.diskStorage({
   },
 
   filename(req, file, cb) {
-    const ext = path.extname(file.originalname);
+    const ext = path.extname(file.originalname).toLowerCase();
 
-    const fileName =
-      Date.now() +
-      "-" +
-      Math.round(Math.random() * 1e9) +
-      ext;
+    const fileName = `incident_${Date.now()}_${crypto.randomUUID()}${ext}`;
 
     cb(null, fileName);
   },
 });
 
-const allowedExtensions = [".log", ".txt", ".json"];
 
 const fileFilter = (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
+    const ext = path.extname(file.originalname).trim().toLowerCase();
 
-    if (!allowedExtensions.includes(ext)) {
-        return cb(
+    if (
+      !ALLOWED_EXTENSIONS.includes(ext) ||
+      !ALLOWED_MIME_TYPES.includes(file.mimetype)
+    ) {
+      logger.warn({
+        file: file.originalname,
+        mimeType: file.mimetype,
+        reason: "Invalid file type"
+    });
+      return cb(
         new BadRequestError(
-            "Only .log, .txt and .json files are allowed",
-            "INVALID_FILE_TYPE"
+          `Only ${ALLOWED_EXTENSIONS.join(", ")} files up to ${config.MAX_UPLOAD_SIZE} MB are supported.`,
+          "INVALID_FILE_TYPE"
         )
-        );
+      );
     }
 
-    cb(null, true);
+    return cb(null, true);
 };
 
-module.exports = multer({
-    storage,
-    fileFilter,
-    limits: {
-        fileSize: 10 * 1024 * 1024,
-    },
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+      fileSize: config.MAX_UPLOAD_SIZE,
+  },
 });
+
+module.exports = {
+  single: upload.single("file"),
+  array: upload.array.bind(upload),
+};

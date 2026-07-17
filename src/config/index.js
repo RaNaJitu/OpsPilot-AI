@@ -30,6 +30,7 @@ const config = {
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 
   INTERNAL_SERVICE_KEY: process.env.INTERNAL_SERVICE_KEY,
+  MAX_UPLOAD_SIZE: process.env.MAX_UPLOAD_SIZE,
 }
 
 
