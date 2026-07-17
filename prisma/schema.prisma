@@ -63,10 +63,18 @@ model Incident {
 
   analyzedAt      DateTime?
 
+  analysisStartedAt DateTime?
+  analysisDurationMs Int?
+
+  errorMessage    String?
+
   userId          String
 
   isDeleted       Boolean  @default(false)
   deletedAt       DateTime?
+
+  category         String?
+  affectedServices Json?
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -93,7 +101,7 @@ model UploadedFile {
   size          Int
   path          String
 
-  checksum      String? @unique
+  checksum      String @unique
 
   incidentId    String
   incident      Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
@@ -113,7 +121,7 @@ model AIResponse {
 
   modelVersion String?
 
-  incidentId   String
+  incidentId   String   @unique
 
   incident     Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
 

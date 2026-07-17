@@ -1,5 +1,6 @@
 const asyncHandler = require("../utils/asyncHandler");
 const incidentService = require("../services/incident.service");
+const incidentAnalysisService = require("../services/incident-analysis.service");
 const { BadRequestError } = require("../utils/error");
 const {
   listIncidentsSchema,
@@ -83,5 +84,23 @@ exports.DELETE = asyncHandler(async (req, res) => {
   return res.status(200).json({
     success: true,
     message: "Incident archived successfully.",
+  });
+});
+
+exports.ANALYZE = asyncHandler(async (req, res) => {
+  const parsed = incidentIdSchema.safeParse(req.params);
+  if (!parsed.success) {
+    throw new BadRequestError("Invalid incident id.", "INVALID_INCIDENT_ID");
+  }
+  console.log("Analyzing incident...", parsed.data);
+  const result = await incidentAnalysisService.analyzeIncident({
+    id: parsed.data.id,
+    userId: req.user.id,
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "Incident analyzed successfully.",
+    data: result,
   });
 });

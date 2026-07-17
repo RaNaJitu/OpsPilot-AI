@@ -31,18 +31,23 @@ const config = {
 
   INTERNAL_SERVICE_KEY: process.env.INTERNAL_SERVICE_KEY,
   MAX_UPLOAD_SIZE: Number(process.env.MAX_UPLOAD_SIZE) || 5 * 1024 * 1024, // bytes (default 5MB)
+
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
+  OPENAI_MAX_LOG_CHARS: Number(process.env.OPENAI_MAX_LOG_CHARS) || 100000,
 }
 
 
-if (!config.GOOGLE_CLIENT_ID) {
-  throw new Error("GOOGLE_CLIENT_ID environment variable is required");
-}
+// if (!config.GOOGLE_CLIENT_ID) {
+//   throw new Error("GOOGLE_CLIENT_ID environment variable is required");
+// }
 
-if (!config.SENDGRID_API_KEY) {
-  throw new Error('SENDGRID_API_KEY missing');
-}
+// if (!config.SENDGRID_API_KEY) {
+//   throw new Error('SENDGRID_API_KEY missing');
+// }
 
-if (!config.MAIL_SEND) {
-  throw new Error('MAIL_SEND missing');
-}
+// if (!config.MAIL_SEND) {
+//   throw new Error('MAIL_SEND missing');
+// }
 module.exports = { config };
+

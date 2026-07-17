@@ -7,10 +7,12 @@ const {
   LIST,
   GET_BY_ID,
   DELETE,
+  ANALYZE,
 } = require("../controllers/incident.controller");
 
 router.get("/", authenticate, LIST);
 router.post("/upload", authenticate, uploadMiddleware.single("file"), UPLOAD);
+router.post("/:id/analyze", authenticate, ANALYZE);
 router.get("/:id", authenticate, GET_BY_ID);
 router.delete("/:id", authenticate, DELETE);
 
