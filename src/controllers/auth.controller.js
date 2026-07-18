@@ -2,9 +2,10 @@ const { BadRequestError, UnauthorizedError } = require("../utils/error");
 const asyncHandler = require('../utils/asyncHandler');
 const { config } = require('../config');
 const authService = require('../services/auth.service');
+const logger = require("../config/logger");
 
 const isProd = process.env.NODE_ENV === 'production';
-
+logger.info(`Auth controller isProd: ${isProd}`);
 const cookieOptions = (maxAge) => ({
      httpOnly: true,
      secure: isProd,
