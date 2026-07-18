@@ -186,15 +186,6 @@ exports.archiveIncident = async ({ id, userId }) => {
       },
     });
 
-    // if (incident.files.length > 0) {
-    //   await tx.uploadedFile.updateMany({
-    //     where: { incidentId: incident.id },
-    //     data: {
-    //       path: null,
-    //       checksum: null,
-    //     },
-    //   });
-    // }
   });
 
   await Promise.all(

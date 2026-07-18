@@ -1,4 +1,3 @@
-// middlewares/error.middleware.js
 const { AppError } = require('../utils/error');
 const {config} = require('../config');
 const logger = require('../config/logger');

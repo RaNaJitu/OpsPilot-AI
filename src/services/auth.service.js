@@ -6,7 +6,6 @@ const { config } = require("../config");
 const logger = require('../config/logger');
 const jwt = require('jsonwebtoken');
 const {OAuth2Client} = require("google-auth-library");
-// const { sendOTPEmail } = require("../utils/email");
 const client = new OAuth2Client(config.GOOGLE_CLIENT_ID);
 
 exports.verifyGoogleIdToken = async(idToken) =>{
