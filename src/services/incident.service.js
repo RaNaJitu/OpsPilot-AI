@@ -2,9 +2,7 @@ const prisma = require("../config/prisma");
 const fsPromises = require("fs/promises");
 const path = require("path");
 const { generateChecksum } = require("../utils/checksum");
-const {
-  assertStoredInUploadDir,
-} = require("../middlewares/upload.middleware");
+const { assertStoredInUploadDir } = require("../middlewares/upload.middleware");
 const {
   ConflictError,
   InternalServerError,
@@ -57,23 +55,116 @@ exports.uploadIncident = async ({ title, file, userId }) => {
 
     throw new InternalServerError(
       "Failed to upload incident.",
-      "UPLOAD_FAILED"
+      "UPLOAD_FAILED",
     );
   }
 };
 
-exports.listIncidents = async ({ userId, page, limit, search }) => {
+exports.listIncidents = async ({
+  userId,
+  page,
+  limit,
+  search,
+  status,
+  severity,
+  category,
+  dateFrom,
+  dateTo,
+}) => {
+  const createdAt = {};
+  if (dateFrom) {
+    const from = new Date(dateFrom);
+    if (!Number.isNaN(from.getTime())) {
+      createdAt.gte = from;
+    }
+  }
+  if (dateTo) {
+    const to = new Date(dateTo);
+    if (!Number.isNaN(to.getTime())) {
+      // Inclusive end-of-day when only a date is provided (YYYY-MM-DD)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateTo))) {
+        to.setUTCHours(23, 59, 59, 999);
+      }
+      createdAt.lte = to;
+    }
+  }
+
+  const searchTerm = typeof search === "string" ? search.trim() : "";
+  const matchedSeverities = searchTerm
+    ? ["LOW", "MEDIUM", "HIGH", "CRITICAL"].filter((value) =>
+        value.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+    : [];
+
   const where = {
     userId,
     isDeleted: false,
-    ...(search
+    ...(searchTerm
       ? {
-          title: {
-            contains: search,
+          OR: [
+            {
+              title: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              summary: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              category: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              rootCause: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            {
+              affectedService: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+            // JSON array stored as text — matches service names inside the payload
+            {
+              affectedServices: {
+                string_contains: searchTerm,
+              },
+            },
+            {
+              files: {
+                some: {
+                  originalName: {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                  },
+                },
+              },
+            },
+            ...(matchedSeverities.length
+              ? [{ severity: { in: matchedSeverities } }]
+              : []),
+          ],
+        }
+      : {}),
+    ...(status ? { status } : {}),
+    ...(severity ? { severity } : {}),
+    ...(category
+      ? {
+          category: {
+            equals: category,
             mode: "insensitive",
           },
         }
       : {}),
+    ...(Object.keys(createdAt).length ? { createdAt } : {}),
   };
 
   const skip = (page - 1) * limit;
@@ -117,6 +208,44 @@ exports.listIncidents = async ({ userId, page, limit, search }) => {
   };
 };
 
+const toAnalysisDto = (incident) => {
+  if (incident.status !== "COMPLETED") {
+    return null;
+  }
+
+  if (!incident.summary && !incident.rootCause) {
+    return null;
+  }
+
+  return {
+    summary: incident.summary,
+    category: incident.category,
+    severity: incident.severity,
+    affectedServices: incident.affectedServices,
+    rootCause: incident.rootCause,
+    confidence: incident.confidence,
+    timeline: incident.timeline,
+    evidence: incident.evidence,
+    recommendations: incident.recommendations,
+    prevention: incident.prevention,
+    analyzedAt: incident.analyzedAt,
+    analysisDurationMs: incident.analysisDurationMs,
+  };
+};
+
+const toRunbookDto = (runbook) => {
+  if (!runbook) return null;
+
+  return {
+    title: runbook.title,
+    estimatedResolutionTime: runbook.estimatedResolutionTime,
+    immediateActions: runbook.immediateActions,
+    verificationSteps: runbook.verificationSteps,
+    rollbackPlan: runbook.rollbackPlan,
+    preventionChecklist: runbook.preventionChecklist,
+  };
+};
+
 exports.getIncidentById = async ({ id, userId }) => {
   const incident = await prisma.incident.findFirst({
     where: {
@@ -125,9 +254,21 @@ exports.getIncidentById = async ({ id, userId }) => {
       isDeleted: false,
     },
     include: {
-      files: true,
-      aiResponses: {
-        orderBy: { createdAt: "desc" },
+      files: {
+        select: {
+          id: true,
+          originalName: true,
+          extension: true,
+          mimeType: true,
+          size: true,
+          createdAt: true,
+        },
+      },
+      runbook: true,
+      _count: {
+        select: {
+          chatMessages: true,
+        },
       },
     },
   });
@@ -136,7 +277,45 @@ exports.getIncidentById = async ({ id, userId }) => {
     throw new NotFoundError("Incident not found.", "INCIDENT_NOT_FOUND");
   }
 
-  return incident;
+  const {
+    summary,
+    rootCause,
+    confidence,
+    timeline,
+    evidence,
+    recommendations,
+    prevention,
+    analyzedAt,
+    analysisDurationMs,
+    runbook,
+    _count,
+    ...incidentFields
+  } = incident;
+
+  return {
+    incident: {
+      ...incidentFields,
+      analyzedAt,
+      analysisDurationMs,
+    },
+    analysis: toAnalysisDto({
+      status: incident.status,
+      summary,
+      category: incident.category,
+      severity: incident.severity,
+      affectedServices: incident.affectedServices,
+      rootCause,
+      confidence,
+      timeline,
+      evidence,
+      recommendations,
+      prevention,
+      analyzedAt,
+      analysisDurationMs,
+    }),
+    chatCount: _count.chatMessages,
+    runbook: toRunbookDto(runbook),
+  };
 };
 
 exports.archiveIncident = async ({ id, userId }) => {
@@ -171,13 +350,12 @@ exports.archiveIncident = async ({ id, userId }) => {
         deletedAt: new Date(),
       },
     });
-
   });
 
   await Promise.all(
     filesToRemove.map((file) =>
-      fsPromises.unlink(path.resolve(process.cwd(), file.path)).catch(() => {})
-    )
+      fsPromises.unlink(path.resolve(process.cwd(), file.path)).catch(() => {}),
+    ),
   );
 
   return true;

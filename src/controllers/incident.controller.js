@@ -2,6 +2,7 @@ const asyncHandler = require("../utils/asyncHandler");
 const incidentService = require("../services/incident.service");
 const incidentAnalysisService = require("../services/incident-analysis.service");
 const incidentChatService = require("../services/incident-chat.service");
+const incidentRunbookService = require("../services/incident-runbook.service");
 const { BadRequestError } = require("../utils/error");
 const {
   listIncidentsSchema,
@@ -165,5 +166,23 @@ exports.DELETE_CHAT = asyncHandler(async (req, res) => {
   return res.status(200).json({
     success: true,
     message: "Chat history cleared successfully.",
+  });
+});
+
+exports.GENERATE_RUNBOOK = asyncHandler(async (req, res) => {
+  const parsed = incidentIdSchema.safeParse(req.params);
+  if (!parsed.success) {
+    throw new BadRequestError("Invalid incident id.", "INVALID_INCIDENT_ID");
+  }
+
+  const runbook = await incidentRunbookService.generateIncidentRunbook({
+    id: parsed.data.id,
+    userId: req.user.id,
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "Runbook generated successfully.",
+    data: runbook,
   });
 });

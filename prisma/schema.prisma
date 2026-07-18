@@ -89,12 +89,33 @@ model Incident {
   files           UploadedFile[]
   aiResponses     AIResponse[]
   chatMessages    ChatMessage[]
+  runbook         Runbook?
 
 
   @@index([userId])
   @@index([status])
   @@index([createdAt])
   @@index([isDeleted])
+}
+
+model Runbook {
+  id                      String   @id @default(cuid())
+
+  incidentId              String   @unique
+  incident                Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  title                   String
+  estimatedResolutionTime String?
+
+  immediateActions        Json
+  verificationSteps       Json
+  rollbackPlan            Json
+  preventionChecklist     Json
+
+  modelVersion            String?
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }
 
 model ChatMessage {

@@ -50,3 +50,11 @@ exports.chatLimiter = createLimiter({
   prefix: "chat",
   message: "Too many chat requests. Please try again in a minute.",
 });
+
+/** Runbook generation (AI-backed) */
+exports.runbookLimiter = createLimiter({
+  windowMs: 60 * 1000,
+  max: 5,
+  prefix: "runbook",
+  message: "Too many runbook requests. Please try again in a minute.",
+});

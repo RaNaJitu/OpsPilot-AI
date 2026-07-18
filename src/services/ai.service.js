@@ -4,6 +4,9 @@ const { z } = require("zod");
 const openai = require("../config/openai");
 const { config } = require("../config");
 const { buildIncidentAnalysisPrompt } = require("../prompts/incident.prompt");
+const {
+  buildIncidentRunbookPrompt,
+} = require("../prompts/incident-runbook.prompt");
 const { BadRequestError, InternalServerError } = require("../utils/error");
 
 const timelineSchema = z.object({
@@ -62,23 +65,46 @@ const readAndPrepareLogFile = async (filePath) => {
   return content;
 };
 
-const parseAndValidate = (raw) => {
-  let parsed;
+const runbookResultSchema = z.object({
+  title: z.string().min(1),
+  estimatedResolutionTime: z.string().min(1),
+  immediateActions: z.array(z.string().min(1)).min(1),
+  verificationSteps: z.array(z.string().min(1)).min(1),
+  rollbackPlan: z.array(z.string().min(1)).min(1),
+  prevention: z.array(z.string().min(1)).min(1),
+});
 
+const parseJson = (raw) => {
   try {
-    parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return typeof raw === "string" ? JSON.parse(raw) : raw;
   } catch {
     throw new InternalServerError(
       "AI returned invalid JSON.",
-      "AI_INVALID_JSON"
+      "AI_INVALID_JSON",
     );
   }
+};
 
+const parseAndValidate = (raw) => {
+  const parsed = parseJson(raw);
   const result = analysisResultSchema.safeParse(parsed);
   if (!result.success) {
     throw new InternalServerError(
       "AI response failed schema validation.",
-      "AI_SCHEMA_INVALID"
+      "AI_SCHEMA_INVALID",
+    );
+  }
+
+  return result.data;
+};
+
+const parseAndValidateRunbook = (raw) => {
+  const parsed = parseJson(raw);
+  const result = runbookResultSchema.safeParse(parsed);
+  if (!result.success) {
+    throw new InternalServerError(
+      "AI runbook failed schema validation.",
+      "AI_SCHEMA_INVALID",
     );
   }
 
@@ -110,7 +136,7 @@ exports.analyzeLogs = async ({ filePath }) => {
   } catch (error) {
     throw new InternalServerError(
       error?.message || "OpenAI request failed.",
-      "AI_REQUEST_FAILED"
+      "AI_REQUEST_FAILED",
     );
   }
 
@@ -118,7 +144,7 @@ exports.analyzeLogs = async ({ filePath }) => {
   if (!rawContent) {
     throw new InternalServerError(
       "AI returned an empty response.",
-      "AI_EMPTY_RESPONSE"
+      "AI_EMPTY_RESPONSE",
     );
   }
 
@@ -129,5 +155,50 @@ exports.analyzeLogs = async ({ filePath }) => {
     analysis,
     modelVersion: response.model || config.OPENAI_MODEL,
     rawResponse: analysis,
+  };
+};
+
+/**
+ * AI-only workflow: structured analysis → prompt → OpenAI → parse/validate → return.
+ * No database writes here. Does not read raw log files.
+ */
+exports.generateRunbook = async ({ incident }) => {
+  const prompt = buildIncidentRunbookPrompt(incident);
+
+  let response;
+  try {
+    response = await openai.responses.create({
+      model: config.OPENAI_MODEL,
+      temperature: 0.2,
+      instructions:
+        "You are an expert SRE writing operational runbooks. Respond with valid JSON only.",
+      input: prompt,
+      text: {
+        format: {
+          type: "json_object",
+        },
+      },
+    });
+  } catch (error) {
+    throw new InternalServerError(
+      error?.message || "OpenAI request failed.",
+      "AI_REQUEST_FAILED",
+    );
+  }
+
+  const rawContent = response.output_text;
+  if (!rawContent) {
+    throw new InternalServerError(
+      "AI returned an empty response.",
+      "AI_EMPTY_RESPONSE",
+    );
+  }
+
+  const runbook = parseAndValidateRunbook(rawContent);
+
+  return {
+    prompt,
+    runbook,
+    modelVersion: response.model || config.OPENAI_MODEL,
   };
 };
