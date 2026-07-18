@@ -8,15 +8,23 @@ const { BadRequestError } = require("../utils/error");
 const { config } = require("../config");
 const logger = require("../config/logger");
 
+/**
+ * Detect read-only serverless runtimes. Prefer process.env over config
+ * so this works even if config was built before platform vars were visible.
+ */
 const isServerless = Boolean(
-  config.VERCEL ||
-  config.AWS_LAMBDA_FUNCTION_NAME ||
-  config.FUNCTION_NAME,
+  process.env.VERCEL ||
+  process.env.VERCEL_ENV ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.FUNCTION_NAME ||
+  process.env.LAMBDA_TASK_ROOT ||
+  __dirname.includes(`${path.sep}var${path.sep}task`) ||
+  process.cwd().includes(`${path.sep}var${path.sep}task`),
 );
 
 /**
  * Local/dev: project uploads dir.
- * Serverless (Vercel/Lambda): only /tmp is writable.
+ * Serverless (Vercel/Lambda): only /tmp is writable — never mkdir under /var/task.
  */
 const uploadDir = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
@@ -34,11 +42,9 @@ const ALLOWED_MIME_TYPES = [
   "",
 ];
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, {
-    recursive: true,
-  });
-}
+const ensureUploadDir = () => {
+  fs.mkdirSync(uploadDir, { recursive: true });
+};
 
 const isSafeOriginalName = (name) => {
   if (!name || typeof name !== "string") return false;

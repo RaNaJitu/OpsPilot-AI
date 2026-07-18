@@ -2,8 +2,10 @@ const cors = require("cors");
 const { config } = require("../config");
 const logger = require("../config/logger");
 
+const normalizeOrigin = (value) => value.trim().replace(/\/+$/, "");
+
 const allowedOrigins = config.ALLOWED_ORIGINS.split(",")
-  .map((o) => o.trim())
+  .map(normalizeOrigin)
   .filter(Boolean);
 
 const isDev = config.NODE_ENV !== "production";
@@ -17,7 +19,7 @@ const corsMiddleware = cors({
       return callback(new Error("Not allowed by CORS"));
     }
 
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(normalizeOrigin(origin))) {
       return callback(null, true);
     }
 
