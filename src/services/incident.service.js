@@ -1,57 +1,78 @@
 const prisma = require("../config/prisma");
-const fsPromises = require("fs/promises");
 const path = require("path");
 const { generateChecksum } = require("../utils/checksum");
 const {
-  assertStoredInUploadDir,
-  toStoredUploadPath,
-} = require("../middlewares/upload.middleware");
+  uploadIncidentFile,
+  deleteIncidentFile,
+} = require("./cloudinary.service");
 const {
   ConflictError,
   InternalServerError,
   NotFoundError,
+  BadRequestError,
 } = require("../utils/error");
+const logger = require("../config/logger");
 
 exports.uploadIncident = async ({ title, file, userId }) => {
+  let uploadedPublicId;
+  
   try {
-    const safePath = assertStoredInUploadDir(file.path);
-    const checksum = await generateChecksum(safePath);
+    if (!file?.buffer) {
+      throw new BadRequestError(
+        "Please upload a valid log file.",
+        "FILE_REQUIRED",
+      );
+    }
 
+    const checksum = generateChecksum(file.buffer);
     const extension = path.extname(file.originalname).toLowerCase();
 
-    const storedPath = toStoredUploadPath(safePath);
+    const cloudFile = await uploadIncidentFile({
+      buffer: file.buffer,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+    });
+    uploadedPublicId = cloudFile.publicId;
 
-    const incident = await prisma.$transaction(async (tx) => {
-      return await tx.incident.create({
-        data: {
-          title,
-          userId,
-          files: {
-            create: {
-              filename: file.filename,
-              originalName: file.originalname,
-              extension,
-              mimeType: file.mimetype,
-              size: file.size,
-              path: storedPath,
-              checksum,
-            },
+    const filename = cloudFile.publicId.split("/").pop();
+
+    const incident = await prisma.incident.create({
+      data: {
+        title,
+        userId,
+        files: {
+          create: {
+            filename,
+            originalName: file.originalname,
+            extension,
+            mimeType: file.mimetype || cloudFile.mimeType,
+            size: file.size || cloudFile.bytes,
+            fileUrl: cloudFile.fileUrl,
+            publicId: cloudFile.publicId,
+            checksum,
           },
         },
-        include: {
-          files: true,
-        },
-      });
+      },
+      include: {
+        files: true,
+      },
     });
 
     return incident;
   } catch (error) {
-    if (file?.path) {
-      await fsPromises.unlink(file.path).catch(() => {});
+    if (uploadedPublicId) {
+      await deleteIncidentFile(uploadedPublicId);
     }
 
-    if (error instanceof ConflictError) {
+    if (error instanceof ConflictError || error instanceof BadRequestError) {
       throw error;
+    }
+
+    if (error?.code === "P2002") {
+      throw new ConflictError(
+        "This file was already uploaded.",
+        "DUPLICATE_FILE",
+      );
     }
 
     throw new InternalServerError(
@@ -330,7 +351,7 @@ exports.archiveIncident = async ({ id, userId }) => {
       files: {
         select: {
           id: true,
-          path: true,
+          publicId: true,
         },
       },
     },
@@ -340,23 +361,17 @@ exports.archiveIncident = async ({ id, userId }) => {
     throw new NotFoundError("Incident not found.", "INCIDENT_NOT_FOUND");
   }
 
-  const filesToRemove = incident.files.filter((file) => file.path);
-
-  await prisma.$transaction(async (tx) => {
-    await tx.incident.update({
-      where: { id: incident.id },
-      data: {
-        status: "ARCHIVED",
-        isDeleted: true,
-        deletedAt: new Date(),
-      },
-    });
+  await prisma.incident.update({
+    where: { id: incident.id },
+    data: {
+      status: "ARCHIVED",
+      isDeleted: true,
+      deletedAt: new Date(),
+    },
   });
 
   await Promise.all(
-    filesToRemove.map((file) =>
-      fsPromises.unlink(path.resolve(process.cwd(), file.path)).catch(() => {}),
-    ),
+    incident.files.map((file) => deleteIncidentFile(file.publicId)),
   );
 
   return true;

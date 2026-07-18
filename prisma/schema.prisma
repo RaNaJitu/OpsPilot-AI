@@ -140,9 +140,11 @@ model UploadedFile {
   extension     String
   mimeType      String
   size          Int
-  path          String
 
-  checksum      String @unique
+  fileUrl       String
+  publicId      String   @unique
+
+  checksum      String   @unique
 
   incidentId    String
   incident      Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)

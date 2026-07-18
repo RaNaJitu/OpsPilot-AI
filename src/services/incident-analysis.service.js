@@ -27,18 +27,15 @@ exports.analyzeIncident = async ({ id, userId }) => {
   });
 
   if (!incident) {
-    throw new NotFoundError(
-      "Incident not found.",
-      "INCIDENT_NOT_FOUND"
-    );
+    throw new NotFoundError("Incident not found.", "INCIDENT_NOT_FOUND");
   }
 
   const file = incident.files[0];
 
-  if (!file?.path) {
+  if (!file?.fileUrl) {
     throw new BadRequestError(
       "No uploaded log file found.",
-      "LOG_FILE_NOT_FOUND"
+      "LOG_FILE_NOT_FOUND",
     );
   }
 
@@ -65,13 +62,13 @@ exports.analyzeIncident = async ({ id, userId }) => {
   if (locked.count === 0) {
     throw new ConflictError(
       "Incident is already being analyzed.",
-      "ANALYSIS_IN_PROGRESS"
+      "ANALYSIS_IN_PROGRESS",
     );
   }
 
   try {
     const { prompt, analysis, modelVersion, rawResponse } = await analyzeLogs({
-      filePath: file.path,
+      fileUrl: file.fileUrl,
     });
 
     const analysisDurationMs = Date.now() - analysisStartedAt.getTime();

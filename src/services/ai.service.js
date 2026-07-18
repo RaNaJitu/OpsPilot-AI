@@ -1,5 +1,3 @@
-const fsPromises = require("fs/promises");
-const path = require("path");
 const { z } = require("zod");
 const openai = require("../config/openai");
 const { config } = require("../config");
@@ -47,12 +45,25 @@ const analysisResultSchema = z.object({
   prevention: z.array(z.string()),
 });
 
-const readAndPrepareLogFile = async (filePath) => {
-  const absolutePath = path.isAbsolute(filePath)
-    ? filePath
-    : path.resolve(process.cwd(), filePath);
+const fetchAndPrepareLogFile = async (fileUrl) => {
+  let response;
+  try {
+    response = await fetch(fileUrl);
+  } catch (error) {
+    throw new InternalServerError(
+      error?.message || "Failed to download log file.",
+      "LOG_DOWNLOAD_FAILED",
+    );
+  }
 
-  const content = await fsPromises.readFile(absolutePath, "utf8");
+  if (!response.ok) {
+    throw new InternalServerError(
+      `Failed to download log file (${response.status}).`,
+      "LOG_DOWNLOAD_FAILED",
+    );
+  }
+
+  const content = await response.text();
 
   if (!content.trim()) {
     throw new BadRequestError("Log file is empty.", "EMPTY_LOG_FILE");
@@ -112,11 +123,11 @@ const parseAndValidateRunbook = (raw) => {
 };
 
 /**
- * AI-only workflow: read logs → prompt → OpenAI → parse/validate → return.
+ * AI-only workflow: fetch logs from Cloudinary → prompt → OpenAI → parse/validate → return.
  * No database writes here.
  */
-exports.analyzeLogs = async ({ filePath }) => {
-  const logs = await readAndPrepareLogFile(filePath);
+exports.analyzeLogs = async ({ fileUrl }) => {
+  const logs = await fetchAndPrepareLogFile(fileUrl);
   const prompt = buildIncidentAnalysisPrompt(logs);
 
   let response;

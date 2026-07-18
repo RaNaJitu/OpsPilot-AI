@@ -1,19 +1,13 @@
-const fs = require("fs");
 const crypto = require("crypto");
 
 /**
- * Generate SHA-256 checksum using a stream
+ * Generate SHA-256 checksum from a Buffer or string.
  */
-const generateChecksum = (filePath) =>
-    new Promise((resolve, reject) => {
-        const hash = crypto.createHash("sha256");
-        const stream = fs.createReadStream(filePath);
-
-        stream.on("error", reject);
-        stream.on("data", (chunk) => hash.update(chunk));
-        stream.on("end", () => resolve(hash.digest("hex")));
-    });
+const generateChecksum = (input) => {
+  const buffer = Buffer.isBuffer(input) ? input : Buffer.from(input);
+  return crypto.createHash("sha256").update(buffer).digest("hex");
+};
 
 module.exports = {
-    generateChecksum,
+  generateChecksum,
 };

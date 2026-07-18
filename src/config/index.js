@@ -6,6 +6,9 @@ const requiredEnv = [
   "GOOGLE_CLIENT_ID",
   "OPENAI_API_KEY",
   "ALLOWED_ORIGINS",
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET",
 ];
 
 for (const key of requiredEnv) {
@@ -40,6 +43,10 @@ const config = {
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 
   MAX_UPLOAD_SIZE: envNumber(process.env.MAX_UPLOAD_SIZE, 5 * 1024 * 1024),
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+  CLOUDINARY_FOLDER: process.env.CLOUDINARY_FOLDER || "opspilot/incidents",
 
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
