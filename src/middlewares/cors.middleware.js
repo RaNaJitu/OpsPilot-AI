@@ -6,7 +6,8 @@ const allowedOrigins = config.ALLOWED_ORIGINS.split(",")
   .filter(Boolean);
 
 const isDev = config.NODE_ENV !== "production";
-
+logger.info(`CORS isDev: ${isDev}`);
+logger.info(`CORS allowedOrigins: ${allowedOrigins}`);
 const corsMiddleware = cors({
   origin(origin, callback) {
     // Non-browser tools (Postman/curl) send no Origin — allow only in development
