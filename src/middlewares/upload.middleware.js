@@ -1,19 +1,30 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const crypto = require("crypto");
 
 const { BadRequestError } = require("../utils/error");
 const { config } = require("../config");
 const logger = require("../config/logger");
 
-const uploadDir = path.resolve(__dirname, "../uploads/incidents");
+const isServerless = Boolean(
+  config.VERCEL ||
+  config.AWS_LAMBDA_FUNCTION_NAME ||
+  config.FUNCTION_NAME,
+);
 
-const ALLOWED_EXTENSIONS = [
-  ".log",
-  ".txt",
-  ".json",
-];
+/**
+ * Local/dev: project uploads dir.
+ * Serverless (Vercel/Lambda): only /tmp is writable.
+ */
+const uploadDir = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : isServerless
+    ? path.join(os.tmpdir(), "opspilot-uploads", "incidents")
+    : path.resolve(__dirname, "../uploads/incidents");
+
+const ALLOWED_EXTENSIONS = [".log", ".txt", ".json"];
 
 // Browsers often send octet-stream / empty type for .log files
 const ALLOWED_MIME_TYPES = [
@@ -40,7 +51,12 @@ const isSafeOriginalName = (name) => {
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    cb(null, uploadDir);
+    try {
+      ensureUploadDir();
+      cb(null, uploadDir);
+    } catch (error) {
+      cb(error);
+    }
   },
 
   filename(req, file, cb) {
@@ -63,8 +79,8 @@ const fileFilter = (req, file, cb) => {
     return cb(
       new BadRequestError(
         `Only ${ALLOWED_EXTENSIONS.join(", ")} files up to ${Math.round(config.MAX_UPLOAD_SIZE / (1024 * 1024))} MB are supported.`,
-        "INVALID_FILE_TYPE"
-      )
+        "INVALID_FILE_TYPE",
+      ),
     );
   }
 
@@ -73,8 +89,8 @@ const fileFilter = (req, file, cb) => {
     return cb(
       new BadRequestError(
         `Only ${ALLOWED_EXTENSIONS.join(", ")} files up to ${Math.round(config.MAX_UPLOAD_SIZE / (1024 * 1024))} MB are supported.`,
-        "INVALID_FILE_TYPE"
-      )
+        "INVALID_FILE_TYPE",
+      ),
     );
   }
 
@@ -98,10 +114,26 @@ const assertStoredInUploadDir = (filePath) => {
   return resolved;
 };
 
+/**
+ * Persist a path that can be reopened later.
+ * Under /tmp (serverless), store absolute paths — relative-to-cwd escapes the project.
+ */
+const toStoredUploadPath = (absolutePath) => {
+  const resolved = path.resolve(absolutePath);
+  const relative = path.relative(process.cwd(), resolved).replace(/\\/g, "/");
+
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
+    return resolved;
+  }
+
+  return relative;
+};
+
 module.exports = {
   single: (fieldName = "file") => upload.single(fieldName),
   array: (fieldName = "files", maxCount = 10) =>
     upload.array(fieldName, maxCount),
   uploadDir,
   assertStoredInUploadDir,
+  toStoredUploadPath,
 };

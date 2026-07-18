@@ -44,6 +44,10 @@ const config = {
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
   OPENAI_MAX_LOG_CHARS: envNumber(process.env.OPENAI_MAX_LOG_CHARS, 100000),
+
+  VERCEL: process.env.VERCEL,
+  AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME,
+  FUNCTION_NAME: process.env.FUNCTION_NAME,
 };
 
 module.exports = { config };

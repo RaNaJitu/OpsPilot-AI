@@ -2,7 +2,10 @@ const prisma = require("../config/prisma");
 const fsPromises = require("fs/promises");
 const path = require("path");
 const { generateChecksum } = require("../utils/checksum");
-const { assertStoredInUploadDir } = require("../middlewares/upload.middleware");
+const {
+  assertStoredInUploadDir,
+  toStoredUploadPath,
+} = require("../middlewares/upload.middleware");
 const {
   ConflictError,
   InternalServerError,
@@ -16,9 +19,7 @@ exports.uploadIncident = async ({ title, file, userId }) => {
 
     const extension = path.extname(file.originalname).toLowerCase();
 
-    const relativePath = path
-      .relative(process.cwd(), safePath)
-      .replace(/\\/g, "/");
+    const storedPath = toStoredUploadPath(safePath);
 
     const incident = await prisma.$transaction(async (tx) => {
       return await tx.incident.create({
@@ -32,7 +33,7 @@ exports.uploadIncident = async ({ title, file, userId }) => {
               extension,
               mimeType: file.mimetype,
               size: file.size,
-              path: relativePath,
+              path: storedPath,
               checksum,
             },
           },
