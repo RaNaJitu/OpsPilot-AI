@@ -13,3 +13,11 @@ exports.listIncidentsSchema = z.object({
 exports.incidentIdSchema = z.object({
   id: z.string().cuid(),
 });
+
+exports.chatMessageSchema = z.object({
+  message: z
+    .string()
+    .trim()
+    .min(1, "Message is required.")
+    .max(2000, "Message must be at most 2000 characters."),
+});

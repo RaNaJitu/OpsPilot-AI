@@ -42,3 +42,11 @@ exports.analyzeLimiter = createLimiter({
   prefix: "analyze",
   message: "Too many analysis requests. Please try again in a minute.",
 });
+
+/** Incident chat (frequent, still AI-backed) */
+exports.chatLimiter = createLimiter({
+  windowMs: 60 * 1000,
+  max: 20,
+  prefix: "chat",
+  message: "Too many chat requests. Please try again in a minute.",
+});

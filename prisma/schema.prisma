@@ -22,6 +22,11 @@ enum Severity {
   CRITICAL
 }
 
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
 
 model User {
   id         String   @id @default(cuid())
@@ -83,12 +88,27 @@ model Incident {
 
   files           UploadedFile[]
   aiResponses     AIResponse[]
+  chatMessages    ChatMessage[]
 
 
   @@index([userId])
   @@index([status])
   @@index([createdAt])
   @@index([isDeleted])
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+
+  incidentId String
+  role       ChatRole
+  message    String
+
+  createdAt  DateTime @default(now())
+
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([incidentId, createdAt])
 }
 
 model UploadedFile {

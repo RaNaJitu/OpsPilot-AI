@@ -5,6 +5,7 @@ const uploadMiddleware = require("../middlewares/upload.middleware");
 const {
   uploadLimiter,
   analyzeLimiter,
+  chatLimiter,
 } = require("../middlewares/rateLimit.middleware");
 const {
   UPLOAD,
@@ -12,6 +13,9 @@ const {
   GET_BY_ID,
   DELETE,
   ANALYZE,
+  LIST_CHAT,
+  CHAT,
+  DELETE_CHAT,
 } = require("../controllers/incident.controller");
 
 router.get("/", authenticate, LIST);
@@ -20,9 +24,12 @@ router.post(
   authenticate,
   uploadLimiter,
   uploadMiddleware.single("file"),
-  UPLOAD
+  UPLOAD,
 );
 router.post("/:id/analyze", authenticate, analyzeLimiter, ANALYZE);
+router.get("/:id/chat", authenticate, LIST_CHAT);
+router.post("/:id/chat", authenticate, chatLimiter, CHAT);
+router.delete("/:id/chat", authenticate, DELETE_CHAT);
 router.get("/:id", authenticate, GET_BY_ID);
 router.delete("/:id", authenticate, DELETE);
 
