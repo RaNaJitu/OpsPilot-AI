@@ -8,7 +8,7 @@ const isProd = process.env.NODE_ENV === 'production';
 logger.info(`Auth controller isProd: ${isProd}`);
 const cookieOptions = (maxAge) => ({
      httpOnly: true,
-     secure: isProd,
+     secure: true,
      sameSite: isProd ? 'strict' : 'lax',
      maxAge,
 });
@@ -28,6 +28,7 @@ exports.VERIFY_GOOGLE_ID_TOKEN = asyncHandler(async(req, res) =>{
      
      const {accessToken, refreshToken, loggedInUser} = await authService.verifyGoogleIdToken(idToken);
      
+     logger.info(`Auth controller accessToken: ${accessToken}`);
      res.cookie("accessToken", accessToken, cookieOptions(config.ACCESS_TOKEN_EXP_SEC * 1000))
      res.cookie("refreshToken", refreshToken, cookieOptions(config.REFRESH_TOKEN_EXP_SEC * 1000))
 
