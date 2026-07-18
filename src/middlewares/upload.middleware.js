@@ -7,7 +7,7 @@ const { BadRequestError } = require("../utils/error");
 const { config } = require("../config");
 const logger = require("../config/logger");
 
-const uploadDir = path.join(__dirname, "../uploads/incidents");
+const uploadDir = path.resolve(__dirname, "../uploads/incidents");
 
 const ALLOWED_EXTENSIONS = [
   ".log",
@@ -29,6 +29,15 @@ if (!fs.existsSync(uploadDir)) {
   });
 }
 
+const isSafeOriginalName = (name) => {
+  if (!name || typeof name !== "string") return false;
+  if (name.includes("\0")) return false;
+  if (name.includes("..") || name.includes("/") || name.includes("\\")) {
+    return false;
+  }
+  return true;
+};
+
 const storage = multer.diskStorage({
   destination(req, file, cb) {
     cb(null, uploadDir);
@@ -42,21 +51,15 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
+  if (!isSafeOriginalName(file.originalname)) {
+    return cb(new BadRequestError("Invalid file name.", "INVALID_FILE_NAME"));
+  }
+
   const ext = path.extname(file.originalname).trim().toLowerCase();
   const mimeType = (file.mimetype || "").toLowerCase();
 
-  logger.info("Middleware: Upload: File type check", {
-    file: file.originalname,
-    ext,
-    mimeType,
-  });
-
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
-    logger.warn("Middleware: Upload: Invalid file extension", {
-      file: file.originalname,
-      mimeType,
-      reason: "Invalid file extension",
-    });
+    logger.warn("Upload rejected: invalid extension", { ext });
     return cb(
       new BadRequestError(
         `Only ${ALLOWED_EXTENSIONS.join(", ")} files up to ${Math.round(config.MAX_UPLOAD_SIZE / (1024 * 1024))} MB are supported.`,
@@ -66,11 +69,7 @@ const fileFilter = (req, file, cb) => {
   }
 
   if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
-    logger.warn("Middleware: Upload: Invalid file mime type", {
-      file: file.originalname,
-      mimeType,
-      reason: "Invalid file type",
-    });
+    logger.warn("Upload rejected: invalid mime type", { mimeType });
     return cb(
       new BadRequestError(
         `Only ${ALLOWED_EXTENSIONS.join(", ")} files up to ${Math.round(config.MAX_UPLOAD_SIZE / (1024 * 1024))} MB are supported.`,
@@ -87,11 +86,22 @@ const upload = multer({
   fileFilter,
   limits: {
     fileSize: config.MAX_UPLOAD_SIZE,
+    files: 1,
   },
 });
+
+const assertStoredInUploadDir = (filePath) => {
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(uploadDir + path.sep) && resolved !== uploadDir) {
+    throw new BadRequestError("Invalid upload path.", "INVALID_UPLOAD_PATH");
+  }
+  return resolved;
+};
 
 module.exports = {
   single: (fieldName = "file") => upload.single(fieldName),
   array: (fieldName = "files", maxCount = 10) =>
     upload.array(fieldName, maxCount),
+  uploadDir,
+  assertStoredInUploadDir,
 };

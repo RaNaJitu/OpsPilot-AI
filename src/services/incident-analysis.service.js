@@ -1,4 +1,5 @@
 const prisma = require("../config/prisma");
+const logger = require("../config/logger");
 const { analyzeLogs } = require("./ai.service");
 const {
   NotFoundError,
@@ -8,23 +9,6 @@ const {
 
 const ANALYZABLE_STATUSES = ["PENDING", "FAILED", "COMPLETED"];
 
-// /**
-// Responsibilities:
-
-// Find Incident
-//       ↓
-// Read UploadedFile
-//       ↓
-// Read file contents
-//       ↓
-// Call AIService
-//       ↓
-// Save AIResponse
-//       ↓
-// Update Incident
-//       ↓
-// Return result
-//  */
 exports.analyzeIncident = async ({ id, userId }) => {
   const incident = await prisma.incident.findFirst({
     where: {
@@ -135,7 +119,10 @@ exports.analyzeIncident = async ({ id, userId }) => {
 
     return updatedIncident;
   } catch (error) {
-    console.error("AI Analysis Failed:", error);
+    logger.error("AI analysis failed", {
+      incidentId: incident.id,
+      message: error.message,
+    });
 
     await prisma.incident.update({
       where: {

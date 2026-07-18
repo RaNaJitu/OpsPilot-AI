@@ -92,7 +92,6 @@ exports.ANALYZE = asyncHandler(async (req, res) => {
   if (!parsed.success) {
     throw new BadRequestError("Invalid incident id.", "INVALID_INCIDENT_ID");
   }
-  console.log("Analyzing incident...", parsed.data);
   const result = await incidentAnalysisService.analyzeIncident({
     id: parsed.data.id,
     userId: req.user.id,

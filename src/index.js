@@ -8,6 +8,7 @@ const logger = require('./config/logger');
 
 const { corsMiddleware } = require('./middlewares/cors.middleware');
 const errorHandler = require('./middlewares/error.middleware');
+const { requestId } = require('./middlewares/requestId.middleware');
 const { reqLogger } = require('./middlewares/req.middleware');
 
 const app = express();
@@ -17,8 +18,10 @@ app.use(helmet({
      crossOriginOpenerPolicy: false,
      crossOriginEmbedderPolicy: false,
 }));
+app.use(requestId);
 app.use(reqLogger);
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: false, limit: "100kb" }));
 app.use(cookieParser());
 app.use("/api/v1/", require("./routes"));
 

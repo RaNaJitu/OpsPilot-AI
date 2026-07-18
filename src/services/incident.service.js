@@ -3,6 +3,9 @@ const fsPromises = require("fs/promises");
 const path = require("path");
 const { generateChecksum } = require("../utils/checksum");
 const {
+  assertStoredInUploadDir,
+} = require("../middlewares/upload.middleware");
+const {
   ConflictError,
   InternalServerError,
   NotFoundError,
@@ -10,30 +13,13 @@ const {
 
 exports.uploadIncident = async ({ title, file, userId }) => {
   try {
-    const checksum = await generateChecksum(file.path);
-
-    // const existingFile = await prisma.uploadedFile.findFirst({
-    //   where: {
-    //     checksum,
-    //     incident: {
-    //       isDeleted: false,
-    //     },
-    //   },
-    // });
-
-    // if (existingFile) {
-    //   await fsPromises.unlink(file.path).catch(() => {});
-
-    //   throw new ConflictError(
-    //     "This log file has already been uploaded.",
-    //     "DUPLICATE_FILE"
-    //   );
-    // }
+    const safePath = assertStoredInUploadDir(file.path);
+    const checksum = await generateChecksum(safePath);
 
     const extension = path.extname(file.originalname).toLowerCase();
 
     const relativePath = path
-      .relative(process.cwd(), file.path)
+      .relative(process.cwd(), safePath)
       .replace(/\\/g, "/");
 
     const incident = await prisma.$transaction(async (tx) => {
