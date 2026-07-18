@@ -9,7 +9,7 @@ logger.info(`Auth controller isProd: ${isProd}`);
 const cookieOptions = (maxAge) => ({
      httpOnly: true,
      secure: true,
-     sameSite: isProd ? 'strict' : 'lax',
+     sameSite: "none",
      maxAge,
 });
 
