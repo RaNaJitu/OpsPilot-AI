@@ -1,5 +1,6 @@
 const cors = require("cors");
 const { config } = require("../config");
+const logger = require("../config/logger");
 
 const allowedOrigins = config.ALLOWED_ORIGINS.split(",")
   .map((o) => o.trim())
