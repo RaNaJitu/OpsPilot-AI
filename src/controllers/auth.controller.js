@@ -5,7 +5,7 @@ const authService = require('../services/auth.service');
 const logger = require("../config/logger");
 
 const isProd = process.env.NODE_ENV === 'production';
-logger.info(`Auth controller isProd: ${isProd}`);
+
 const cookieOptions = (maxAge) => ({
      httpOnly: true,
      secure: true,
@@ -62,8 +62,8 @@ exports.LOGOUT = asyncHandler(async(req, res) =>{
 
      await authService.logout(refreshToken);
 
-     res.clearCookie("accessToken");
-     res.clearCookie("refreshToken");
+     res.clearCookie("accessToken", cookieOptions(0));
+     res.clearCookie("refreshToken", cookieOptions(0));
      return res.status(200).json({
           success: true,
           message: "Logged out successfully"

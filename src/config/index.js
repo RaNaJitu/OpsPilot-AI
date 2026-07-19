@@ -33,8 +33,8 @@ const config = {
 
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
-  ACCESS_TOKEN_EXP: process.env.ACCESS_TOKEN_EXP || "15m",
-  REFRESH_TOKEN_EXP: process.env.REFRESH_TOKEN_EXP || "7d",
+  ACCESS_TOKEN_EXP: process.env.ACCESS_TOKEN_EXP || "5m",
+  REFRESH_TOKEN_EXP: process.env.REFRESH_TOKEN_EXP || "1d",
   ACCESS_TOKEN_EXP_SEC: envNumber(process.env.ACCESS_TOKEN_EXP_SEC, 900),
   REFRESH_TOKEN_EXP_SEC: envNumber(process.env.REFRESH_TOKEN_EXP_SEC, 604800),
   REDIS_USER_TTL: envNumber(process.env.REDIS_USER_TTL, 86400),
