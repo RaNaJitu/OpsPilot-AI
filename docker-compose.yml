@@ -14,9 +14,14 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d OpsPilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - OpsPilot-network
-  
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin
@@ -26,7 +31,8 @@ services:
     ports:
       - "8081:80"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - OpsPilot-network
 
@@ -41,6 +47,38 @@ services:
       - "8001:8001"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "irctcpass", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - OpsPilot-network
+
+  # Optional full-stack API (profile: app)
+  # Usage: docker compose --profile app up -d --build
+  app:
+    profiles: ["app"]
+    build: .
+    image: opspilot-backend:local
+    container_name: opspilot-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # In-compose hostnames (override localhost from .env)
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/OpsPilot
+      REDIS_URL: redis://:irctcpass@redis:6379
+      PORT: "4001"
+      HOST: "0.0.0.0"
+      NODE_ENV: production
+    ports:
+      - "${HOST_PORT:-4001}:4001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - OpsPilot-network
 

@@ -13,6 +13,17 @@ const { reqLogger } = require('./middlewares/req.middleware');
 
 const app = express();
 
+// Probes must work without browser Origin (Docker HEALTHCHECK, curl, uptime monitors)
+app.get("/health", (req, res) => {
+     res.status(200).json({
+          message: "ok",
+     });
+});
+
+app.get("/", (req, res) => {
+     res.send("OpsPilot-AI backend");
+});
+
 app.use(corsMiddleware);
 app.use(helmet({
      crossOriginOpenerPolicy: false,
@@ -25,18 +36,7 @@ app.use(express.urlencoded({ extended: false, limit: "100kb" }));
 app.use(cookieParser());
 app.use("/api/v1/", require("./routes"));
 
-
-app.get("/", (req, res) => {
-     res.send("Hello from index.js of user-service");
-})
-
-app.get("/health", (req, res) => {
-     res.status(200).json({
-          message: "ok"
-     })
-})
-
-app.use(errorHandler)
+app.use(errorHandler);
 
 const startServer = async () => {
      try {

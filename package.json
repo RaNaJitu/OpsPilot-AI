@@ -8,7 +8,8 @@
     "dev": "nodemon src/index.js",
     "lint": "eslint .",
     "test": "node --test --test-reporter=spec 'src/**/*.test.js'",
-    "build": "prisma generate"
+    "build": "prisma generate",
+    "seed:demo": "node scripts/seed-demo-dashboard.js"
   },
   "keywords": [],
   "author": "",
