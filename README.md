@@ -62,7 +62,7 @@ Express API  (/api/v1)
 | Validation | Zod |
 | Security | Helmet · CORS · Redis rate limiting |
 | Logging | Winston |
-| Tooling | ESLint · Prettier · Nodemon · Docker · GitHub Actions |
+| Tooling | ESLint · Prettier · Nodemon · Docker |
 
 ---
 
@@ -333,14 +333,7 @@ docker run --env-file .env -p 8000:8000 opspilot-ai-backend
 ```
 
 - Image: Node 20 Alpine, non-root user, healthcheck on `/health`
-- Compose deploy helper: `docker-compose.deploy.yml` (expects external Postgres/Redis network)
-
-### CI/CD
-
-| Workflow | Purpose |
-|----------|---------|
-| `.github/workflows/ci.yml` | Lint, test, Prisma generate, build & push GHCR image |
-| `.github/workflows/deploy-dev.yml` | Pull image, migrate, healthcheck on DEV host |
+- Local infra: `docker compose up -d` (Postgres + Redis)
 
 ### Production checklist
 
@@ -364,6 +357,21 @@ docker run --env-file .env -p 8000:8000 opspilot-ai-backend
 ```
 
 Unhandled errors may include `requestId` for correlation with Winston logs.
+
+---
+
+## Future Enhancements
+
+- Real-time incident monitoring
+- Kafka/SQS event ingestion
+- Elasticsearch/OpenSearch integration
+- Slack & Microsoft Teams notifications
+- Kubernetes cluster monitoring
+- Prometheus & Grafana integration
+- Multi-tenant organization support
+- RBAC (Role-Based Access Control)
+- AI anomaly detection
+- Incident timeline visualization
 
 ---
 
