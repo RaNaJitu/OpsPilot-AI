@@ -32,6 +32,8 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma Client
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/OpsPilot
         run: npx prisma generate
 
       - name: Run ESLint
