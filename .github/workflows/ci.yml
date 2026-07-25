@@ -17,7 +17,9 @@ jobs:
   lint-and-test:
     name: Lint, Test & Build
     runs-on: ubuntu-latest
-
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/OpsPilot
+  
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,8 +34,6 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma Client
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/OpsPilot
         run: npx prisma generate
 
       - name: Run ESLint
