@@ -1,0 +1,32 @@
+# Used by GitHub Actions to deploy the API container on remote servers.
+# Expects infra (postgres/redis) from docker-compose.yml already running,
+# and a .env file in the same directory as this compose file.
+#
+# Required:
+#   APP_IMAGE=ghcr.io/<org>/opspilot-ai-backend:<tag>
+#
+# Important:
+#   REDIS_URL / DATABASE_URL in .env must use Docker DNS names on this network
+#   (e.g. redis://:irctcpass@redis:6379 and postgresql://postgres:postgres@postgres:5432/OpsPilot),
+#   NOT localhost — localhost inside the app container is the app itself.
+
+name: opspilot-deploy
+
+services:
+  app:
+    image: ${APP_IMAGE:?APP_IMAGE is required}
+    container_name: opspilot-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HOST: "0.0.0.0"
+    ports:
+      - "${HOST_PORT:-4001}:${PORT:-4001}"
+    networks:
+      - OpsPilot-network
+
+networks:
+  OpsPilot-network:
+    name: OpsPilot-AI_OpsPilot-network
+    external: true

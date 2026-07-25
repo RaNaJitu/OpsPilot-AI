@@ -1,0 +1,99 @@
+name: Deploy DEV
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        description: "Full image reference to deploy (e.g. ghcr.io/org/app:sha-abc1234)"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Full image reference to deploy (leave empty to use :develop)"
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: opspilot-ai-backend
+
+jobs:
+  deploy:
+    name: Deploy to DEV
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Resolve image tag
+        id: image
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          INPUT_TAG="${{ inputs.image_tag }}"
+          if [ -n "$INPUT_TAG" ]; then
+            IMAGE="$INPUT_TAG"
+          else
+            IMAGE="ghcr.io/${OWNER}/${IMAGE_NAME}:develop"
+          fi
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "Resolved image: ${IMAGE}"
+
+      - name: Copy deploy compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          source: docker-compose.deploy.yml
+          target: ${{ secrets.APP_PATH }}
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          APP_IMAGE: ${{ steps.image.outputs.image }}
+          APP_PATH: ${{ secrets.APP_PATH }}
+          GHCR_USER: ${{ github.repository_owner }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          envs: APP_IMAGE,APP_PATH,GHCR_USER,GHCR_TOKEN
+          script: |
+            set -euo pipefail
+            cd "$APP_PATH"
+
+            if [ ! -f .env ]; then
+              echo ".env is missing in $APP_PATH"
+              exit 1
+            fi
+
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+            export APP_IMAGE
+            docker compose -f docker-compose.deploy.yml pull
+            docker compose -f docker-compose.deploy.yml up -d --remove-orphans --force-recreate
+
+            echo "Running database migrations..."
+            docker compose -f docker-compose.deploy.yml run --rm --no-deps app npx prisma migrate deploy
+
+            echo "Waiting for health check..."
+            for i in $(seq 1 12); do
+              if curl -fsS "http://127.0.0.1:${HOST_PORT:-4001}/health" >/dev/null 2>&1; then
+                echo "DEV health check passed"
+                docker logout ghcr.io || true
+                exit 0
+              fi
+              sleep 5
+            done
+
+            echo "DEV health check failed"
+            docker compose -f docker-compose.deploy.yml logs --tail=100 app || true
+            docker logout ghcr.io || true
+            exit 1
