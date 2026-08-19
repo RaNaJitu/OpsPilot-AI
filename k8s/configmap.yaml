@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opspilot-config
+  namespace: opspilot
+data:
+  NODE_ENV: "production"
+  PORT: "8000"
+  HOST: "0.0.0.0"
+  ALLOWED_ORIGINS: "http://localhost:8080"
+  VITE_API_URL: "/api/v1"
